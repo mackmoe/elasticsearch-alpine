@@ -19,17 +19,14 @@ command_background="yes"
 
 
 #init_daemon
-depend() {
-        need net
-}
-
-start_pre() {
-        checkpath --directory --owner $command_user:$command_user --mode 0775 \
-                /run/$RC_SVCNAME /var/log/$RC_SVCNAME
-}
-
-start_service() {
-	todo
+start_service()  {
+    echo -e "Starting elasticsearch"
+    start-stop-daemon --start \
+        --exec /usr/sbin/mydaemon \
+        --pidfile /var/run/mydaemon.pid \
+        -- \
+        --args-for-mydaemon
+    $?
 }
 
 stop_service() {

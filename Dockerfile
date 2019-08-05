@@ -1,63 +1,20 @@
-FROM openjdk:11-jre
+FROM alpine:3.10 as builder
 
-LABEL maintainer "https://github.com/blacktop"
+RUN addgroup -g 1000 elasticsearch \
+    && adduser -u 1000 -h /usr/share/elasticsearch -G elasticsearch elasticsearch -D \
+    && apk add --no-cache bash gnupg openjdk11-jre-headless openrc-doc man su-exec
 
-RUN set -ex; \
-	# https://artifacts.elastic.co/GPG-KEY-elasticsearch
-	wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
-# key='46095ACC8548582C1A2699A9D27D666CD88E42B4'; \
-# export GNUPGHOME="$(mktemp -d)"; \
-# gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
-# gpg --export "$key" > /etc/apt/trusted.gpg.d/elastic.gpg; \
-# rm -rf "$GNUPGHOME"; \
-# apt-key list
+FROM alpine:3.10
 
-# https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-repositories.html
-# https://www.elastic.co/guide/en/elasticsearch/reference/5.0/deb.html
-RUN set -x \
-	&& apt-get update && apt-get install -y --no-install-recommends apt-transport-https && rm -rf /var/lib/apt/lists/* \
-	&& echo 'deb https://artifacts.elastic.co/packages/7.x/apt stable main' > /etc/apt/sources.list.d/elasticsearch.list
+ENV OSBUILDER_CONTAINER true
 
-ENV ELASTICSEARCH_VERSION 7.3.0
-ENV ELASTICSEARCH_DEB_VERSION 7.3.0
-ENV ELASTIC_CONTAINER=true
-
-RUN set -x \
-	\
-	# don't allow the package to install its sysctl file (causes the install to fail)
-	# Failed to write '262144' to '/proc/sys/vm/max_map_count': Read-only file system
-	&& dpkg-divert --rename /usr/lib/sysctl.d/elasticsearch.conf \
-	\
-	&& apt-get update \
-	&& apt-get install -y --no-install-recommends "elasticsearch=$ELASTICSEARCH_DEB_VERSION" \
-	&& rm -rf /var/lib/apt/lists/*
-
-ENV PATH /usr/share/elasticsearch/bin:$PATH
-
-WORKDIR /usr/share/elasticsearch
-
-RUN set -ex \
-	&& for path in \
-	./data \
-	./logs \
-	./config \
-	./config/scripts \
-	./config/ingest-geoip \
-	; do \
-	mkdir -p "$path"; \
-	chown -R elasticsearch:elasticsearch "$path"; \
-	done
-
-COPY config/elastic/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml
-COPY config/x-pack/log4j2.properties /usr/share/elasticsearch/config/x-pack/
-COPY config/logrotate /etc/logrotate.d/elasticsearch
-COPY elastic-entrypoint.sh /
-COPY docker-healthcheck /usr/local/bin/
-
-VOLUME ["/usr/share/elasticsearch/data"]
-
-EXPOSE 9200 9300
-ENTRYPOINT ["/elastic-entrypoint.sh"]
-CMD ["elasticsearch"]
-
-# HEALTHCHECK CMD ["docker-healthcheck"]
+COPY files/bootstrap.sh /tmp/bootstrap.sh
+ENV VERSION 7.2.1
+ENV GPG_KEY 46095ACC8548582C1A2699A9D27D666CD88E42B4
+ENV DOWNLOAD_URL https://artifacts.elastic.co/downloads/elasticsearch
+ENV EXPECTED_SHA_URL https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-linux-x86_64.tar.gz.sha512
+ENV ES_TARBALL_SHA fa7a3108cc67e09393aea625027e9c3777774994c634d183447900d6e5e420b244319935f9bad43094d6d3ad9f175e5e2065643bf0e2663c6300c99aaf4ab9b0
+ENV ES_TARBAL https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-linux-x86_64.tar.gz
+ENV ES_TARBALL_ASC https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-linux-x86_64.tar.gz.asc
+RUN ["/tmp/bootstrap.sh"]
+RUN apk del --purge .build-deps
