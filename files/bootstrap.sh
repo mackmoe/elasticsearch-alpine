@@ -1,17 +1,18 @@
-#!/usr/bin/env
+#!/bin/sh
 #####
 # This ENV should already be set before this is run but just check to make sure.
 #
 #####
 
+
 check_workdir() {
-if [ ! $PWD = "/tmp"]; then
+if [ ! $PWD = "/tmp" ]; then
   set -ex
   cd /tmp
-  echo "===> Install Elasticsearch..."
+  echo -e "===> Install Elasticsearch..."
 else
   set -ex
-  echo "===> Install Elasticsearch..."
+  echo -e "===> Install Elasticsearch..."
 fi
 }
 
@@ -23,7 +24,7 @@ fi
 
 add_gpgkeys() {
 if [ "$ES_TARBALL_ASC" ]; then
-  wget --progress=bar:force -O elasticsearch.tar.gz.asc "$ES_TARBALL_ASC"
+  wget -nv -O elasticsearch.tar.gz.asc "$ES_TARBALL_ASC"
   export GNUPGHOME="$(mktemp -d)"
   gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$GPG_KEY" || \
   gpg --keyserver pgp.mit.edu --recv-keys "$GPG_KEY" ||  \
@@ -48,7 +49,7 @@ untar_elastic() {
 }
 
 check_workdir
-wget --progress=bar:force -O elasticsearch.tar.gz "$ES_TARBAL"
+wget -nv -O elasticsearch.tar.gz "$ES_TARBAL"
 version_check
 add_gpgkeys
 untar_elastic
