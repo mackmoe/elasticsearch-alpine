@@ -1,12 +1,17 @@
 FROM alpine:3.10 as builder
 
-RUN addgroup -g 1000 elasticsearch \
-    && adduser -u 1000 -h /usr/share/elasticsearch -G elasticsearch elasticsearch -D \
-    && apk add --no-cache bash gnupg openjdk11-jre-headless openrc-doc man su-exec
+# build a container with some decent tools
+RUN apk add --no-cache bash bash-doc bash-completion util-linux pciutils coreutils binutils grep \
+    && apk add --no-cache gnupg openrc openrc-doc su-exec
 
+# then build off of that
 FROM alpine:3.10
 
 ENV OSBUILDER_CONTAINER true
+
+RUN addgroup -g 1000 elasticsearch \
+    && adduser -u 1000 -h /usr/share/elasticsearch -G elasticsearch elasticsearch -D \
+    && apk add --no-cache openjdk11-jre-headless elasticsearch
 
 COPY files/bootstrap.sh /tmp/bootstrap.sh
 ENV VERSION 7.2.1
@@ -17,4 +22,5 @@ ENV ES_TARBALL_SHA fa7a3108cc67e09393aea625027e9c3777774994c634d183447900d6e5e42
 ENV ES_TARBAL https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-linux-x86_64.tar.gz
 ENV ES_TARBALL_ASC https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.2.1-linux-x86_64.tar.gz.asc
 RUN ["/tmp/bootstrap.sh"]
+
 RUN apk del --purge .build-deps
